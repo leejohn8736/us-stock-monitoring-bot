@@ -37,3 +37,38 @@ investment_profile.example.json을 개인용 investment_profile.json으로 복�
 증권사를 확인하기 전 조건부 주문·지원 세션·유효기간을 확정하지 않습니다. 돌파가를 보통 매수 지정가로, 손절가를 보통 매도 지정가로 바꾸지 않습니다. 현재는 수동 가격 확인/증권사 알림 후 판단으로 안내하며 독립적인 미보유 익절/손절 예약은 권하지 않습니다. 익절·손절이 함께 남을 때 취소·수량 관리 필요성을 표시합니다.
 
 호가 자료(2026-09-21 확인): SEC Rule 612 유예 안내, KRX 규정. 미국 2027-11-01 이후에는 재확인 전 가격 산정을 차단합니다. 한국 호가 계산 함수는 테스트되어 있지만 세션 검증 부족으로 실제 카드에는 사용하지 않습니다.
+
+
+설정
+.env.example을 .env로 복사하고 Discord 및 Alpaca 값을 입력합니다. 인증정보는 Git에 포함되지 않습니다.
+
+DISCORD_BOT_TOKEN=""
+DISCORD_CHANNEL_ID=""
+DISCORD_BOT_NAME="미국 주식 동향 봇"
+ALPACA_API_KEY_ID=""
+ALPACA_API_SECRET_KEY=""
+ALPACA_DATA_FEED="iex"
+US_MARKET_REPORT_HOUR="8"
+US_MARKET_REPORT_MINUTE="0"
+KR_MARKET_REPORT_HOUR="15"
+KR_MARKET_REPORT_MINUTE="35"
+US_MARKET_TIMEZONE="Asia/Seoul"
+로컬 확인
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m us_market_bot.discord_bot --check-config
+.venv/bin/python -m us_market_bot.cli --once
+.venv/bin/python -m us_market_bot.sample --output samples
+샘플 명령은 .env를 읽고 현재 시점의 근거와 아침 형식 미리보기/당일 마감 샘플을 생성합니다. Discord 발송·주문 호출은 없습니다. 실제 아침이 아닌 시점의 미리보기는 운영 가설에 포함하지 않습니다. 과거 오전을 재현하려고 오후 정보를 주입하지 않습니다. 샘플과 증거 JSON은 Git에 포함하지 않습니다.
+
+Windows 미니PC 설치
+PowerShell에서 다음 명령을 실행합니다. 예약 작업 권한이 부족하면 현재 사용자의 시작프로그램으로 자동 등록합니다.
+
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install_windows.ps1
+해제:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install_windows.ps1 -Uninstall
+테스트
+.venv/bin/python -m unittest discover -s tests -v
+보안
+Discord 토큰, Alpaca 키, 향후 KRX·OpenDART 키는 .env에만 보관합니다. 실제 인증정보나 데이터베이스는 GitHub에 올리지 않습니다.
