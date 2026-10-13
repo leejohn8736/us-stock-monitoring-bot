@@ -42,6 +42,9 @@ investment_profile.example.json을 개인용 investment_profile.json으로 복�
 설정
 .env.example을 .env로 복사하고 Discord 및 Alpaca 값을 입력합니다. 인증정보는 Git에 포함되지 않습니다.
 
+
+아래 디스코드 관련 내용은 적용하지 않았습니다
+
 DISCORD_BOT_TOKEN=""
 DISCORD_CHANNEL_ID=""
 DISCORD_BOT_NAME="미국 주식 동향 봇"
@@ -59,6 +62,8 @@ python3 -m venv .venv
 .venv/bin/python -m us_market_bot.discord_bot --check-config
 .venv/bin/python -m us_market_bot.cli --once
 .venv/bin/python -m us_market_bot.sample --output samples
+
+
 샘플 명령은 .env를 읽고 현재 시점의 근거와 아침 형식 미리보기/당일 마감 샘플을 생성합니다. Discord 발송·주문 호출은 없습니다. 실제 아침이 아닌 시점의 미리보기는 운영 가설에 포함하지 않습니다. 과거 오전을 재현하려고 오후 정보를 주입하지 않습니다. 샘플과 증거 JSON은 Git에 포함하지 않습니다.
 
 Windows 미니PC 설치
