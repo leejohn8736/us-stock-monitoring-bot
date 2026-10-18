@@ -36,9 +36,8 @@ def _integer(name: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class Settings:
-    discord_token: str
-    discord_channel_id: int
-    discord_bot_name: str
+    telegram_bot_token: str
+    telegram_chat_id: int
     alpaca_key_id: str
     alpaca_secret_key: str
     alpaca_feed: str
@@ -53,11 +52,8 @@ class Settings:
     def from_env(cls) -> "Settings":
         timezone_name = os.environ.get("US_MARKET_TIMEZONE", "Asia/Seoul")
         return cls(
-            discord_token=os.environ.get("DISCORD_BOT_TOKEN", "").strip(),
-            discord_channel_id=_integer("DISCORD_CHANNEL_ID", 0),
-            discord_bot_name=os.environ.get(
-                "DISCORD_BOT_NAME", "미국 주식 동향 봇"
-            ).strip(),
+            telegram_bot_token=os.environ.get("TELEGRAM_BOT_TOKEN", "").strip(),
+            telegram_chat_id=_integer("TELEGRAM_CHAT_ID", 0),
             alpaca_key_id=os.environ.get("ALPACA_API_KEY_ID", "").strip(),
             alpaca_secret_key=os.environ.get("ALPACA_API_SECRET_KEY", "").strip(),
             alpaca_feed=os.environ.get("ALPACA_DATA_FEED", "iex").strip() or "iex",
@@ -71,16 +67,16 @@ class Settings:
             timezone=ZoneInfo(timezone_name),
         )
 
-    def missing(self, *, include_discord: bool = True) -> tuple[str, ...]:
+    def missing(self, *, include_telegram: bool = True) -> tuple[str, ...]:
         values = {
             "ALPACA_API_KEY_ID": self.alpaca_key_id,
             "ALPACA_API_SECRET_KEY": self.alpaca_secret_key,
         }
-        if include_discord:
+        if include_telegram:
             values.update(
                 {
-                    "DISCORD_BOT_TOKEN": self.discord_token,
-                    "DISCORD_CHANNEL_ID": str(self.discord_channel_id or ""),
+                    "TELEGRAM_BOT_TOKEN": self.telegram_bot_token,
+                    "TELEGRAM_CHAT_ID": str(self.telegram_chat_id or ""),
                 }
             )
         return tuple(name for name, value in values.items() if not value)
