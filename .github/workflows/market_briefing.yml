@@ -1,12 +1,10 @@
 name: US & Domestic Stock Briefing Bot
 
 on:
+  workflow_dispatch:
   schedule:
-    # 1. 아침 브리핑: 한국 시간 08:00 (UTC 23:00 전날)
-    - cron: '0 23 * * *'
-    # 2. 마감 브리핑: 한국 시간 15:35 (UTC 06:35 당일)
-    - cron: '35 6 * * 1-5'
-  workflow_dispatch: # 깃허브 웹에서 수동 실행 버튼 제공
+    # 매일 UTC 기준 아침/마감 시간 등에 맞춘 자동 실행 스케줄 (필요에 따라 조정 가능)
+    - cron: '30 21 * * *'
 
 jobs:
   run-briefing:
@@ -19,19 +17,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e . python-telegram-bot requests
+          pip install --editable .
 
       - name: Determine and Run Briefing
+        run: python run_report.py
         env:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          # 현재 UTC 시간을 기준으로 아침/마감 판단 또는 수동 실행 분기
-          # (간단하게 스케줄 시각에 맞춰 각각 분리하거나 파라미터로 제어할 수 있습니다)
-          python run_report.py --kind morning || python run_report.py --kind close
