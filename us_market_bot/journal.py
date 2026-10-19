@@ -91,7 +91,6 @@ class Journal:
         if preview:
             edition_id = f"preview:{edition_id}:{hashlib.sha256(asof.isoformat().encode()).hexdigest()[:12]}"
         
-        # datetime 객체 포함 페이로드를 안전하게 직렬화
         serialized_payload = json.dumps(payload, cls=DatetimeEncoder, ensure_ascii=False)
 
         with self.connect() as c:
@@ -127,3 +126,33 @@ class Journal:
                 (kind,),
             ).fetchone()
         return self.get(row[0]) if row else None
+
+    def delivery_state(self, edition_id: str, chunk: int) -> str | None:
+        """메시지 전송 상태를 확인합니다."""
+        with self.connect() as c:
+            row = c.execute(
+                "SELECT status FROM briefing_delivery WHERE edition_id=? AND chunk=?",
+                (edition_id, chunk),
+            ).fetchone()
+        return row["status"] if row else None
+
+    def claim(self, edition_id: str, chunk: int) -> bool:
+        """중복 전송 방지를 위해 전송 권한을 선점(Claim)합니다."""
+        now_str = datetime.now(timezone.utc).isoformat()
+        with self.connect() as c:
+            try:
+                c.execute(
+                    "INSERT INTO briefing_delivery (edition_id, chunk, status, claimed_at) VALUES (?, ?, 'pending', ?)",
+                    (edition_id, chunk, now_str),
+                )
+                return True
+            except sqlite3.IntegrityError:
+                return False
+
+    def delivered(self, edition_id: str, chunk: int, message_id: int) -> None:
+        """전송 완료 상태와 메시지 ID를 기록합니다."""
+        with self.connect() as c:
+            c.execute(
+                "UPDATE briefing_delivery SET status='sent', message_id=? WHERE edition_id=? AND chunk=?",
+                (str(message_id), edition_id, chunk),
+            )
