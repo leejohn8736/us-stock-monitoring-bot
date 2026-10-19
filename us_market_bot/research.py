@@ -4,7 +4,8 @@ import os
 
 from us_market_bot.calendar import session, latest_closed, next_session
 from us_market_bot.journal import Journal
-from us_market_bot.prices import make_card, allocate, review_card, RULE_SOURCES, render_morning, render_close, moves
+from us_market_bot.prices import make_card, allocate, review_card, RULE_SOURCES, moves
+from us_market_bot.report import render_morning, render_close
 from us_market_bot.profile import load_profile
 from us_market_bot.research_data import ResearchData, EQUITIES, KST, NY
 from us_market_bot.providers.alpaca import MarketDataError
