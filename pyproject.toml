@@ -10,4 +10,5 @@ dependencies = [
     "requests",
     "python-telegram-bot",
     "pytz",
+    "exchange-calendars",
 ]
