@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "us_market_bot"
+version = "0.1.0"
+description = "US and domestic stock monitoring briefing bot"
+dependencies = [
+    "requests",
+    "python-telegram-bot",
+    "pytz",
+]
