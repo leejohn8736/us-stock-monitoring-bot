@@ -1,10 +1,11 @@
+"""봇 설정 및 환경 변수 로드 모듈"""
+
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from zoneinfo import ZoneInfo
-
 
 DEFAULT_WATCHLIST = (
     "SPY",
@@ -54,8 +55,9 @@ class Settings:
         return cls(
             telegram_bot_token=os.environ.get("TELEGRAM_BOT_TOKEN", "").strip(),
             telegram_chat_id=_integer("TELEGRAM_CHAT_ID", 0),
-            alpaca_key_id=os.environ.get("ALPACA_API_KEY_ID", "").strip(),
-            alpaca_secret_key=os.environ.get("ALPACA_API_SECRET_KEY", "").strip(),
+            # GitHub Secrets 이름(ALPACA_KEY_ID, ALPACA_SECRET_KEY)과 완벽하게 일치시킴
+            alpaca_key_id=os.environ.get("ALPACA_KEY_ID", "").strip(),
+            alpaca_secret_key=os.environ.get("ALPACA_SECRET_KEY", "").strip(),
             alpaca_feed=os.environ.get("ALPACA_DATA_FEED", "iex").strip() or "iex",
             database_path=Path(os.environ.get("US_MARKET_DB", "data/us_market.db")),
             report_hour=max(0, min(23, _integer("US_MARKET_REPORT_HOUR", 8))),
@@ -69,8 +71,8 @@ class Settings:
 
     def missing(self, *, include_telegram: bool = True) -> tuple[str, ...]:
         values = {
-            "ALPACA_API_KEY_ID": self.alpaca_key_id,
-            "ALPACA_API_SECRET_KEY": self.alpaca_secret_key,
+            "ALPACA_KEY_ID": self.alpaca_key_id,
+            "ALPACA_SECRET_KEY": self.alpaca_secret_key,
         }
         if include_telegram:
             values.update(
