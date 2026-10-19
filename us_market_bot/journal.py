@@ -60,10 +60,17 @@ BEGIN
 END;
 """
 
+class DatetimeEncoder(json.JSONEncoder):
+    """datetime 객체를 ISO 형식 문자열로 안전하게 변환하는 커스텀 인코더"""
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return super().default(o)
+
 class Journal:
     def __init__(self, path):
         self.path = str(path)
-        # 근본 원인 해결: DB 폴더가 없으면 자동 생성
+        # 데이터베이스 폴더가 없으면 자동 생성
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         
         with self.connect() as c:
@@ -83,6 +90,10 @@ class Journal:
         edition_id = f"{kind}:{day}"
         if preview:
             edition_id = f"preview:{edition_id}:{hashlib.sha256(asof.isoformat().encode()).hexdigest()[:12]}"
+        
+        # datetime 객체 포함 페이로드를 안전하게 직렬화
+        serialized_payload = json.dumps(payload, cls=DatetimeEncoder, ensure_ascii=False)
+
         with self.connect() as c:
             c.execute(
                 "INSERT OR IGNORE INTO research_editions VALUES (?,?,?,?,?,?,?)",
@@ -93,7 +104,7 @@ class Journal:
                     asof.isoformat(),
                     datetime.now(timezone.utc).isoformat(),
                     body,
-                    json.dumps(payload, ensure_ascii=False),
+                    serialized_payload,
                 ),
             )
         return self.get(edition_id)
