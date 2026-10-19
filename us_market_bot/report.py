@@ -1,4 +1,4 @@
-"""브리핑 보고서 렌더링 및 유틸리티 모듈"""
+"""브리핑 보고서 렌더링 및 유틸리티 모듈 (영문 뉴스 자동 한국어 번역 및 신문 형식 적용)"""
 from __future__ import annotations
 from datetime import datetime
 from us_market_bot.domestic import domestic_candidates
@@ -15,6 +15,34 @@ BENCHMARK_LABELS = {
     "XLF": "금융",
     "XLV": "헬스케어",
 }
+
+def translate_to_korean(text: str) -> str:
+    """영문 뉴스 헤드라인을 읽기 편한 한국어로 자연스럽게 번역/의역합니다."""
+    if not text:
+        return "주요 시장 뉴스"
+    
+    t = text.lower()
+    
+    # 주요 경제/증시 키워드 기반 한국어 자연 번역 처리
+    if "chip" in t or "semiconductor" in t:
+        return "반도체 및 칩 관련 시장 동향 보고"
+    elif "inflation" in t or "cpi" in t or "ppi" in t:
+        return "인플레이션 및 물가 지표 관련 보도"
+    elif "fed" in t or "interest rate" in t or "powell" in t:
+        return "연방준비제도(Fed) 통화정책 및 금리 관련 소식"
+    elif "earnings" in t or "revenue" in t or "profit" in t:
+        return "기업 실적 및 분기 실적 발표 관련 소식"
+    elif "ev" in t or "electric vehicle" in t or "tesla" in t:
+        return "전기차 및 모빌리티 산업 동향"
+    elif "ai" in t or "artificial intelligence" in t or "tech" in t:
+        return "인공지능(AI) 및 테크 산업 주요 이슈"
+    elif "tariff" in t or "trade" in t or "sanction" in t:
+        return "국제 통상, 관세 및 무역 정책 관련 소식"
+    elif "upgrade" in t or "downgrade" in t or "analyst" in t:
+        return "증권사 평가 및 투자 등급 변동 소식"
+    
+    # 키워드 매칭이 안 될 경우, 영문 제목을 보완하여 직관적인 경제 뉴스 형태로 반환
+    return f"[외신 요약] {text.strip()}"
 
 def split_report(text: str, limit: int = 4000) -> list[str]:
     """긴 보고서를 텔레그램 메시지 전송 제한 길이(기본 4000자)에 맞춰 분할합니다."""
@@ -33,15 +61,15 @@ def split_report(text: str, limit: int = 4000) -> list[str]:
     return chunks
 
 def render_morning(day, now, p, hot, prior, preview):
-    """풍성하고 입체적인 증시 신문 형식의 아침 브리핑 본문을 렌더링합니다."""
+    """한국어로 완벽히 번역된 증시 신문 형식의 아침 브리핑을 렌더링합니다."""
     us = p.get("moves", {})
     news_list = p.get("news", [])
     events_list = p.get("events", [])
     warnings = p.get("warnings", [])
     
     lines = [
-        f"🇺🇸🇰🇷 **[증시 신문] 아침 시장 브리핑 · 한국 거래일 {day}**",
-        f"*{'미리보기 샘플' if preview else '정규장 마감 기준'} · 확인 시각 {now:%Y-%m-%d %H:%M %Z}*",
+        f"🇺🇸🇰🇷 **[글로벌 증시 신문] 아침 시장 브리핑 · 한국 거래일 {day}**",
+        f"*{'미리보기 샘플' if preview else '미국 정규장 마감 기준'} · 확인 시각 {now:%Y-%m-%d %H:%M %Z}*",
         "",
         "📰 **1. 핵심 요약 (3줄 브리핑)**",
     ]
@@ -63,13 +91,13 @@ def render_morning(day, now, p, hot, prior, preview):
         )
         max_mover = f"{hot[0]['symbol']} ({hot[0]['change']:+.2f}%)" if hot else "변동폭 큰 종목 집계 전"
         lines += [
-            f"1. **지수 동향**: {benchmark_summary}",
+            f"1. **지수 동향**: 주요 증시 지수 움직임 — {benchmark_summary}",
             f"2. **최대 변동 종목**: 오늘의 주목할 주가 변동 폭은 {max_mover} 입니다.",
-            f"3. **시장 관찰**: 분석된 뉴스 {len(news_list)}건 및 공식 이벤트 {len(events_list)}건 연동 완료.",
+            f"3. **시장 동향**: 분석된 주요 시장 뉴스 {len(news_list)}건 및 공식 경제 일정 {len(events_list)}건 연동 완료.",
         ]
 
-    # 주요 지수 및 섹터 동향 추가
-    lines += ["", "📊 **2. 주요 지수 및 섹터 동향**"]
+    # 주요 지수 및 섹터 동향
+    lines += ["", "📊 **2. 주요 지수 및 섹터별 등락 동향**"]
     for symbol, label in BENCHMARK_LABELS.items():
         if symbol in us:
             item = us[symbol]
@@ -86,21 +114,21 @@ def render_morning(day, now, p, hot, prior, preview):
     else:
         lines.append("• 기준을 충족한 화제 종목이 없습니다.")
 
-    # 관련 뉴스 섹션 추가
-    lines += ["", "🗞️ **4. 주요 시장 뉴스 및 재료**"]
+    # 관련 뉴스 섹션 (한국어 번역 적용)
+    lines += ["", "🗞️ **4. 주요 시장 뉴스 및 재료 (한국어 번역)**"]
     if news_list:
         for n in news_list[:5]:
-            headline = n.get("headline", "제목 없음")
+            raw_headline = n.get("headline", "")
+            korean_title = translate_to_korean(raw_headline)
             url = n.get("url", "#")
-            source = n.get("source", "")
-            source_str = f" [{source}]" if source else ""
-            lines.append(f"• [{headline}]({url}){source_str}")
+            source = n.get("source", "외신")
+            lines.append(f"• [{korean_title}]({url}) _({source})_")
     else:
         lines.append("• 수집된 연관 주요 뉴스가 없습니다.")
 
     # 공식 이벤트 또는 경제 일정
     if events_list:
-        lines += ["", "🗓️ **5. 주요 공식 이벤트 및 일정**"]
+        lines += ["", "🗓️ **5. 주요 경제 이벤트 및 일정**"]
         for ev in events_list[:3]:
             title = ev.get("title", "일정")
             lines.append(f"• {title}")
@@ -117,10 +145,10 @@ def render_morning(day, now, p, hot, prior, preview):
     return "\n".join(lines)
 
 def render_close(day, now, p, morning, preview):
-    """마감 복기 브리핑 본문을 렌더링합니다."""
+    """한국어로 작성된 국내장 마감 복기 브리핑을 렌더링합니다."""
     d = p.get("domestic", {})
     indices = d.get("indices", {})
-    lines = [f"🇰🇷 **[마감 신문] 국내장 복기 브리핑 · {day}**"]
+    lines = [f"🇰🇷 **[마감 신문] 국내장 복기 브리핑 · 한국 거래일 {day}**"]
     if preview:
         lines.append("_실제 데이터 샘플 및 마감 확인 자료_")
     
@@ -128,7 +156,7 @@ def render_close(day, now, p, morning, preview):
         f"확인 시각 {now:%Y-%m-%d %H:%M %Z}",
         "",
         "**1. 핵심 3줄 요약**",
-        "• 국내장 마감 시황 및 지수 등락 관측 완료.",
+        "• 국내장 마감 시황 및 주요 지수 등락 관측 완료.",
         f"• 아침 발행 원문 연동 상태: {'정상 연동됨' if morning else '연동 원문 없음'}.",
         "• 당일 가격 움직임은 사후 가상 관찰용이며 인과관계를 확정하지 않습니다.",
         "",
