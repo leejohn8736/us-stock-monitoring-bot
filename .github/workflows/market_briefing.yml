@@ -3,7 +3,6 @@ name: US & Domestic Stock Briefing Bot
 on:
   workflow_dispatch:
   schedule:
-    # 매일 UTC 기준 아침/마감 시간 등에 맞춘 자동 실행 스케줄 (필요에 따라 조정 가능)
     - cron: '30 21 * * *'
 
 jobs:
@@ -25,7 +24,8 @@ jobs:
           pip install --editable .
 
       - name: Determine and Run Briefing
-        run: python run_report.py
+        # --kind morning 인자를 필수로 추가하여 실행 오류를 근본적으로 차단합니다.
+        run: python run_report.py --kind morning
         env:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
