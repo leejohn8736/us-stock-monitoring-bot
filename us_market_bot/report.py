@@ -33,69 +33,114 @@ def split_report(text: str, limit: int = 4000) -> list[str]:
     return chunks
 
 def render_morning(day, now, p, hot, prior, preview):
-    """아침 브리핑 본문을 렌더링합니다."""
+    """풍성하고 입체적인 증시 신문 형식의 아침 브리핑 본문을 렌더링합니다."""
     us = p.get("moves", {})
-    lines = [f"🇺🇸🇰🇷 **아침 주식 브리핑 · 한국 거래일 {day}**"]
-    if preview:
-        lines.append("**샘플·장전 형식 미리보기: 지금 확인 가능한 자료만 사용합니다.**")
+    news_list = p.get("news", [])
+    events_list = p.get("events", [])
+    warnings = p.get("warnings", [])
     
-    lines += [
-        f"확인 시각 {now:%Y-%m-%d %H:%M %Z} · 미국 정규장 {p.get('us_session', '')}",
+    lines = [
+        f"🇺🇸🇰🇷 **[증시 신문] 아침 시장 브리핑 · 한국 거래일 {day}**",
+        f"*{'미리보기 샘플' if preview else '정규장 마감 기준'} · 확인 시각 {now:%Y-%m-%d %H:%M %Z}*",
         "",
-        "**핵심 3줄**",
+        "📰 **1. 핵심 요약 (3줄 브리핑)**",
     ]
     
     if p.get("repeated_us"):
         lines += [
-            "1. 새로 종료된 미국 정규장이 없어 이전 수치·뉴스를 반복하지 않습니다.",
-            "2. 국내 새 가설과 신규 가격안 생성은 보류합니다.",
-            "3. 한국장 마감에는 확인된 국내 자료와 기존 원문을 검토합니다.",
+            "• 새로 종료된 미국 정규장이 없어 이전 데이터와 뉴스를 반복합니다.",
+            "• 국내장 관찰 가설 및 신규 가격 제안은 보류됩니다.",
+            "• 마감 시점에 확정된 국내 수급 및 지수 변동을 복기합니다.",
         ]
     else:
-        benchmark = (
+        benchmark_summary = (
             " · ".join(
-                f"{s} {us[s]['change']:+.2f}%"
-                for s in ("SPY", "QQQ", "SMH")
+                f"{BENCHMARK_LABELS.get(s, s)} {us[s]['change']:+.2f}%"
+                for s in ("SPY", "QQQ", "SMH", "DIA")
                 if s in us
             )
-            or "정규장 지수 대용 ETF 자료 부족"
+            or "주요 지수 대용 ETF 시세 수집 대기 중"
         )
+        max_mover = f"{hot[0]['symbol']} ({hot[0]['change']:+.2f}%)" if hot else "변동폭 큰 종목 집계 전"
         lines += [
-            f"1. [사실] {benchmark}.",
-            f"2. [사실] 확인 범위 내 최대 변동: {hot[0]['symbol']} {hot[0]['change']:+.2f}%." if hot else "2. 종목별 움직임 비교 자료 부족.",
-            f"3. 관찰 가설 {len(p.get('hypotheses', []))}개, 가격 검토 카드 {len(p.get('cards', []))}개.",
+            f"1. **지수 동향**: {benchmark_summary}",
+            f"2. **최대 변동 종목**: 오늘의 주목할 주가 변동 폭은 {max_mover} 입니다.",
+            f"3. **시장 관찰**: 분석된 뉴스 {len(news_list)}건 및 공식 이벤트 {len(events_list)}건 연동 완료.",
         ]
 
-    lines += ["", "**미국 주요 움직임**"]
-    for item in hot:
-        symbol = item["symbol"]
-        lines.append(f"• [사실] **({symbol}) {item['change']:+.2f}%**, 종가 ${item.get('close', 0):,.2f}")
+    # 주요 지수 및 섹터 동향 추가
+    lines += ["", "📊 **2. 주요 지수 및 섹터 동향**"]
+    for symbol, label in BENCHMARK_LABELS.items():
+        if symbol in us:
+            item = us[symbol]
+            lines.append(f"• **{label} ({symbol})**: {item['change']:+.2f}% (종가: ${item.get('close', 0):,.2f})")
 
+    # 오늘의 핫 종목 세부 정보
+    lines += ["", "🔥 **3. 오늘의 화제 종목 (Top Movers)**"]
+    if hot:
+        for item in hot:
+            symbol = item["symbol"]
+            vol_ratio = item.get("volume_ratio")
+            vol_str = f" · 거래량 비율 {vol_ratio:.1f}배" if vol_ratio else ""
+            lines.append(f"• **{symbol}**: {item['change']:+.2f}% (종가 ${item.get('close', 0):,.2f}){vol_str}")
+    else:
+        lines.append("• 기준을 충족한 화제 종목이 없습니다.")
+
+    # 관련 뉴스 섹션 추가
+    lines += ["", "🗞️ **4. 주요 시장 뉴스 및 재료**"]
+    if news_list:
+        for n in news_list[:5]:
+            headline = n.get("headline", "제목 없음")
+            url = n.get("url", "#")
+            source = n.get("source", "")
+            source_str = f" [{source}]" if source else ""
+            lines.append(f"• [{headline}]({url}){source_str}")
+    else:
+        lines.append("• 수집된 연관 주요 뉴스가 없습니다.")
+
+    # 공식 이벤트 또는 경제 일정
+    if events_list:
+        lines += ["", "🗓️ **5. 주요 공식 이벤트 및 일정**"]
+        for ev in events_list[:3]:
+            title = ev.get("title", "일정")
+            lines.append(f"• {title}")
+
+    # 시스템 경고 또는 참고 안내
+    if warnings:
+        lines += ["", "⚠️ **참고 및 주의 사항**"]
+        for w in warnings:
+            lines.append(f"• {w}")
+
+    lines.append("")
+    lines.append("_본 브리핑은 투자 추천이 아니며, 사실 기반 시장 동향 및 관찰 보조 자료입니다._")
+    
     return "\n".join(lines)
 
 def render_close(day, now, p, morning, preview):
-    """마감 브리핑 본문을 렌더링합니다."""
+    """마감 복기 브리핑 본문을 렌더링합니다."""
     d = p.get("domestic", {})
     indices = d.get("indices", {})
-    lines = [f"🇰🇷 **국내 주식 마감 브리핑 · {day}**"]
+    lines = [f"🇰🇷 **[마감 신문] 국내장 복기 브리핑 · {day}**"]
     if preview:
-        lines.append("**실제 데이터 샘플·확인 시점 마감 자료.**")
+        lines.append("_실제 데이터 샘플 및 마감 확인 자료_")
     
     lines += [
         f"확인 시각 {now:%Y-%m-%d %H:%M %Z}",
         "",
-        "**핵심 3줄**",
-        "1. [사실] 국내 마감 시황 관측 완료.",
-        f"2. 보존된 당일 아침 원문 {'있음' if morning else '없음'}.",
-        "3. 오늘 관측 결과로 인과관계나 수익률을 확정하지 않습니다.",
+        "**1. 핵심 3줄 요약**",
+        "• 국내장 마감 시황 및 지수 등락 관측 완료.",
+        f"• 아침 발행 원문 연동 상태: {'정상 연동됨' if morning else '연동 원문 없음'}.",
+        "• 당일 가격 움직임은 사후 가상 관찰용이며 인과관계를 확정하지 않습니다.",
         "",
-        "**오늘의 시장**",
+        "**2. 국내 지수 현황**",
     ]
     
-    if isinstance(indices, dict):
+    if isinstance(indices, dict) and indices:
         for v in indices.values():
-            lines.append(f"• {v.get('name', '지수')} {v.get('close', 0):,.2f}, {v.get('change', 0):+.2f}%")
-    
+            lines.append(f"• **{v.get('name', '지수')}**: {v.get('close', 0):,.2f} ({v.get('change', 0):+.2f}%)")
+    else:
+        lines.append("• 당일 확정 지수 자료 없음.")
+        
     return "\n".join(lines)
 
 def build_report(
