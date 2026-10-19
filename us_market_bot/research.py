@@ -4,7 +4,8 @@ import os
 
 from us_market_bot.calendar import session, latest_closed, next_session
 from us_market_bot.journal import Journal
-from us_market_bot.prices import make_card, allocate, review_card, RULE_SOURCES
+from us_market_bot.prices import make_card, allocate, review_card, RULE_SOURCES, moves
+from us_market_bot.report import render_morning, render_close
 from us_market_bot.profile import load_profile
 from us_market_bot.research_data import ResearchData, EQUITIES, KST, NY
 from us_market_bot.providers.alpaca import MarketDataError
@@ -89,13 +90,8 @@ class ResearchService:
         target = next_session("XKRX", now) if preview else session("XKRX", day)
         if target is None:
             raise ValueError("한국 휴장일: 아침 가설을 생성하지 않습니다.")
-        
-        # [수정됨] 개장 후 아침 원문 생성 제한 조건 제거 (언제든 강제 생성 가능)
-        # if not preview and now >= target.open:
-        #     raise ValueError(
-        #         "개장 후에는 아침 원문을 새로 생성하지 않습니다. 저장된 /오늘브리핑을 확인하세요."
-        #     )
 
+        # 개장 후 아침 원문 생성 제한 조건 제거 완료
         day = target.date
         existing = self.journal.get(f"morning:{day}")
         if existing and not preview:
@@ -194,10 +190,10 @@ class ResearchService:
         target = session("XKRX", day)
         if target is None:
             raise ValueError("한국 휴장일: 마감 복기를 생성하지 않습니다.")
-        
+
         morning_edition = self.journal.get(f"morning:{day}")
         morning_payload = morning_edition["payload"] if morning_edition else {}
-        
+
         snapshot = self.data.domestic_snapshot() if not preview else None
         payload = {
             "morning": morning_payload,
