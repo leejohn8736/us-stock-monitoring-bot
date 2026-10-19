@@ -4,8 +4,7 @@ import os
 
 from us_market_bot.calendar import session, latest_closed, next_session
 from us_market_bot.journal import Journal
-from us_market_bot.prices import make_card, allocate, review_card, RULE_SOURCES
-from us_market_bot.report import render_morning, render_close
+from us_market_bot.prices import make_card, allocate, review_card, RULE_SOURCES, render_morning, render_close, moves
 from us_market_bot.profile import load_profile
 from us_market_bot.research_data import ResearchData, EQUITIES, KST, NY
 from us_market_bot.providers.alpaca import MarketDataError
@@ -20,28 +19,6 @@ LABELS = {
     "XLF": "금융 ETF",
     "XLV": "헬스케어 ETF",
 }
-
-def moves(history, closed):
-    """미국 종목의 가격 변동률과 거래량 비율을 계산합니다."""
-    result = {}
-    for symbol, bars in history.items():
-        if (
-            len(bars) < 2
-            or bars[-1]["date"] != closed.date
-            or not all(b["complete"] for b in bars[-2:])
-        ):
-            continue
-        b = bars[-1]
-        result[symbol] = {
-            **b,
-            "symbol": symbol,
-            "change": 100 * (b["close"] / bars[-2]["close"] - 1),
-            "volume_ratio": b["volume"]
-            / (sum(x["volume"] for x in bars[-21:-1]) / len(bars[-21:-1]))
-            if len(bars) > 1
-            else None,
-        }
-    return result
 
 def event_path(title):
     text = title.lower()
@@ -113,6 +90,7 @@ class ResearchService:
         if target is None:
             raise ValueError("한국 휴장일: 아침 가설을 생성하지 않습니다.")
 
+        # 개장 후 아침 원문 생성 제한 조건 제거 완료
         day = target.date
         existing = self.journal.get(f"morning:{day}")
         if existing and not preview:
