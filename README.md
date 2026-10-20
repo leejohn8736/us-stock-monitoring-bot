@@ -83,3 +83,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\install_windows.ps1 -Unins
 .venv/bin/python -m unittest discover -s tests -v
 보안
 Discord 토큰, Alpaca 키, 향후 KRX·OpenDART 키는 .env에만 보관합니다. 실제 인증정보나 데이터베이스는 GitHub에 올리지 않습니다.
+
+
+~~ 소스의 출처의 아래 깃허브 ~~
+
+junyeolfilm
+us-stock-monitoring-bot
